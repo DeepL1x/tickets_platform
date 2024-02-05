@@ -9,3 +9,19 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model Constants {
+  id             Int   @id @default(autoincrement())
+  serviceFeeRate Float @default(0.1) // Default service fee rate
+  minimumFee     Int   @default(5) // Default minimum fee
+}
+
+model TicketTier {
+  id            Int     @id @default(autoincrement())
+  name          String
+  eventId       Int //here should be relation to event model/entity.
+  buyerPrice    Int
+  serviceFee    Int
+  promoterPrice Int
+  description   String?
+}
