@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 
@@ -6,18 +6,38 @@ import { Prisma } from '@prisma/client';
 export class TicketTierService {
   constructor(private prisma: PrismaService) {}
 
-  async createTicketTier(data: Prisma.TicketTierCreateInput) {
+  async createTicketTier(data: {
+    name: string;
+    eventId: number;
+    buyerPrice?: number;
+    promoterPrice?: number;
+    serviceFee?: number;
+    description?: string;
+  }) {
     return this.prisma.$transaction(async (tx) => {
-      const constants = await tx.constants.findUnique({ where: { id: 1 } });
-      const serviceFee = (data.buyerPrice / 100) * constants.serviceFeeRate;
-      const newTicketTier = await tx.ticketTier.create({
+      if (data.buyerPrice && typeof data.buyerPrice === 'number') {
+        const constants = await tx.constants.findUnique({ where: { id: 1 } });
+        const serviceFee = Math.ceil(
+          data.buyerPrice * constants.serviceFeeRate,
+        );
+        data.serviceFee =
+          serviceFee > constants.minimumFee ? serviceFee : constants.minimumFee;
+        data.promoterPrice = data.buyerPrice - serviceFee;
+      } else if (data.promoterPrice && typeof data.promoterPrice === 'number') {
+        const constants = await tx.constants.findUnique({ where: { id: 1 } });
+        const buyerPrice = Math.ceil(
+          data.promoterPrice / (1 - constants.serviceFeeRate),
+        );
+        data.serviceFee = buyerPrice - data.promoterPrice;
+        data.buyerPrice = buyerPrice;
+      }
+      
+      const newTicketTier = tx.ticketTier.create({
         data: {
           ...data,
-          serviceFee:
-            serviceFee > constants.minimumFee
-              ? serviceFee
-              : constants.minimumFee,
-          promoterPrice: data.buyerPrice - serviceFee,
+          buyerPrice: data.buyerPrice,
+          promoterPrice: data.promoterPrice,
+          serviceFee: data.serviceFee,
         },
       });
       return newTicketTier;
@@ -39,19 +59,25 @@ export class TicketTierService {
     return this.prisma.$transaction(async (tx) => {
       if (data.buyerPrice && typeof data.buyerPrice === 'number') {
         const constants = await tx.constants.findUnique({ where: { id: 1 } });
-        const serviceFee = (data.buyerPrice / 100) * constants.serviceFeeRate;
+
+        const serviceFee = Math.ceil(
+          data.buyerPrice * constants.serviceFeeRate,
+        );
+
         data.serviceFee =
           serviceFee > constants.minimumFee ? serviceFee : constants.minimumFee;
         data.promoterPrice = data.buyerPrice - serviceFee;
       } else if (data.promoterPrice && typeof data.promoterPrice === 'number') {
         const constants = await tx.constants.findUnique({ where: { id: 1 } });
+
         const buyerPrice = Math.ceil(
           data.promoterPrice / (1 - constants.serviceFeeRate),
         );
+
         data.serviceFee = buyerPrice - data.promoterPrice;
         data.buyerPrice = buyerPrice;
       }
-      const newTicketTier = await tx.ticketTier.update({
+      const newTicketTier = tx.ticketTier.update({
         where: where,
         data: data,
       });
