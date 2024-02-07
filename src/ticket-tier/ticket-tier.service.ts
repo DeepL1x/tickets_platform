@@ -39,7 +39,7 @@ export class TicketTierService {
           data.promoterPrice / (1 - constants.serviceFeeRate),
         );
 
-        if (buyerPrice < constants.minimumFee) {
+        if (buyerPrice - data.promoterPrice < constants.minimumFee) {
           data.buyerPrice = data.promoterPrice + constants.minimumFee;
           data.serviceFee = constants.minimumFee;
         } else {
@@ -75,7 +75,7 @@ export class TicketTierService {
     return this.prisma.$transaction(async (tx) => {
       if (data.buyerPrice && typeof data.buyerPrice === 'number') {
         const constants = await tx.constants.findUnique({ where: { id: 1 } });
-        
+
         if (data.buyerPrice < constants.minimumFee) {
           throw new BadRequestException(
             `Buyer price must be greater than or equal to ${constants.minimumFee}`,
@@ -96,7 +96,7 @@ export class TicketTierService {
           data.promoterPrice / (1 - constants.serviceFeeRate),
         );
 
-        if (buyerPrice < constants.minimumFee) {
+        if (buyerPrice - data.promoterPrice < constants.minimumFee) {
           data.buyerPrice = data.promoterPrice + constants.minimumFee;
           data.serviceFee = constants.minimumFee;
         } else {
