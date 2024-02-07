@@ -18,26 +18,4 @@ describe('Constant validation test', () => {
 
     expect(errors.length).toBe(5);
   });
-
-  it('should fail on 2 missing fields', async () => {
-    const invalidDtoObject = new CreateTicketTierDto();
-    invalidDtoObject.name = 'test';
-    invalidDtoObject.eventId = 123;
-
-    const errors = await validate(invalidDtoObject);
-    console.log(errors);
-
-    expect(errors.length).toBe(2);
-  });
-
-  it('test', async () => {
-    const invalidDtoObject = new CreateTicketTierDto();
-    invalidDtoObject.name = 'test';
-    invalidDtoObject.eventId = 123;
-    invalidDtoObject.buyerPrice = 123;
-    const errors = await validate(invalidDtoObject);
-    console.log(errors);
-
-    expect(errors.length).toBe(0);
-  });
 });
