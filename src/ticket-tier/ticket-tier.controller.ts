@@ -6,9 +6,12 @@ import {
   Delete,
   Body,
   Param,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { TicketTierService } from './ticket-tier.service';
-import { TicketTier } from '@prisma/client';
+import { CreateTicketTierDto } from './dto/create-ticket-tier.dto';
+import { updateTicketTierDto } from './dto/update-ticket-tier.dto';
+import { PriceValidationPipe } from './validators/price-validation.pipe';
 
 @Controller('ticket-tier')
 export class TicketTierController {
@@ -20,27 +23,32 @@ export class TicketTierController {
   }
 
   @Get('event/:eventId')
-  async getTicketTiersByEventId(@Param('eventId') eventId: number) {
+  async getTicketTiersByEventId(
+    @Param('eventId', ParseIntPipe) eventId: number,
+  ) {
     return this.ticketTierService.getTicketTiers({ eventId: eventId });
   }
 
   @Get('/:id')
-  async getTicketTierById(@Param('id') id: number) {
+  async getTicketTierById(@Param('id', ParseIntPipe) id: number) {
     return this.ticketTierService.getTicketTierById({ id: id });
   }
 
   @Post()
-  async createTicketTier(@Body() data: TicketTier) {
+  async createTicketTier(@Body(PriceValidationPipe) data: CreateTicketTierDto) {
     return this.ticketTierService.createTicketTier(data);
   }
 
   @Put('/:id')
-  async updateTicketTier(@Param('id') id: number, @Body() data: TicketTier) {
+  async updateTicketTier(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: updateTicketTierDto,
+  ) {
     return this.ticketTierService.updateTicketTier({ id: id }, data);
   }
 
   @Delete('/:id')
-  async deleteTicketTier(@Param('id') id: number) {
+  async deleteTicketTier(@Param('id', ParseIntPipe) id: number) {
     return this.ticketTierService.deleteTicketTier({ id: id });
   }
 }
