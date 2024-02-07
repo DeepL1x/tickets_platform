@@ -3,6 +3,7 @@ import { TicketTierService } from './ticket-tier.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { mockDeep } from 'jest-mock-extended';
 import { PrismaClient } from '@prisma/client';
+import { BadRequestException } from '@nestjs/common';
 
 describe('TicketTierService', () => {
   let service: TicketTierService;
@@ -86,6 +87,50 @@ describe('TicketTierService', () => {
         service.createTicketTier(mockTicketTierCreatePromoter),
       ).resolves.toEqual(mockTicketTier);
     });
+
+    it('should throw BadRequestException', async () => {
+      prisma.ticketTier.create = jest
+        .fn()
+        .mockImplementationOnce((args) => args.data);
+
+      jest
+        .spyOn(prisma, '$transaction')
+        .mockImplementationOnce((callback) => callback(prisma));
+
+      expect(
+        service.createTicketTier({
+          buyerPrice: 90,
+          eventId: 123,
+          name: 'test',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should create a ticket tier with correct buyer price by promoter price', async () => {
+      prisma.ticketTier.create = jest
+        .fn()
+        .mockImplementationOnce((args) => args.data);
+
+      jest
+        .spyOn(prisma, '$transaction')
+        .mockImplementationOnce((callback) => callback(prisma));
+
+      const testPromPrice = 1;
+      
+      expect(
+        service.createTicketTier({
+          promoterPrice: 1,
+          eventId: 123,
+          name: 'test',
+        }),
+      ).resolves.toEqual({
+        promoterPrice: testPromPrice,
+        serviceFee: mockConstants.minimumFee,
+        buyerPrice: testPromPrice + mockConstants.minimumFee,
+        eventId: 123,
+        name: 'test',
+      });
+    });
   });
 
   describe('update TicketTier', () => {
@@ -122,6 +167,50 @@ describe('TicketTierService', () => {
         buyerPrice: 2000,
         serviceFee: 200,
         promoterPrice: 1800,
+      });
+    });
+
+    it('should throw BadRequestException', async () => {
+      prisma.ticketTier.update = jest
+        .fn()
+        .mockImplementationOnce((args) => args.data);
+
+      jest
+        .spyOn(prisma, '$transaction')
+        .mockImplementationOnce((callback) => callback(prisma));
+
+      expect(
+        service.updateTicketTier(
+          { id: 1 },
+          {
+            buyerPrice: 90,
+          },
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should update a ticket tier with correct buyer price by promoter price', async () => {
+      prisma.ticketTier.update = jest
+        .fn()
+        .mockImplementationOnce((args) => args.data);
+
+      jest
+        .spyOn(prisma, '$transaction')
+        .mockImplementationOnce((callback) => callback(prisma));
+
+      const testPromPrice = 1;
+
+      expect(
+        service.updateTicketTier(
+          { id: 1 },
+          {
+            promoterPrice: 1,
+          },
+        ),
+      ).resolves.toEqual({
+        promoterPrice: testPromPrice,
+        serviceFee: mockConstants.minimumFee,
+        buyerPrice: testPromPrice + mockConstants.minimumFee,
       });
     });
   });

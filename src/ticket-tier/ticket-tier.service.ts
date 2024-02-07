@@ -17,21 +17,37 @@ export class TicketTierService {
     return this.prisma.$transaction(async (tx) => {
       if (data.buyerPrice && typeof data.buyerPrice === 'number') {
         const constants = await tx.constants.findUnique({ where: { id: 1 } });
+
+        if (data.buyerPrice < constants.minimumFee) {
+          throw new BadRequestException(
+            `Buyer price must be greater than or equal to ${constants.minimumFee}`,
+          );
+        }
+
         const serviceFee = Math.ceil(
           data.buyerPrice * constants.serviceFeeRate,
         );
+
         data.serviceFee =
           serviceFee > constants.minimumFee ? serviceFee : constants.minimumFee;
+
         data.promoterPrice = data.buyerPrice - serviceFee;
       } else if (data.promoterPrice && typeof data.promoterPrice === 'number') {
         const constants = await tx.constants.findUnique({ where: { id: 1 } });
+
         const buyerPrice = Math.ceil(
           data.promoterPrice / (1 - constants.serviceFeeRate),
         );
-        data.serviceFee = buyerPrice - data.promoterPrice;
-        data.buyerPrice = buyerPrice;
+
+        if (buyerPrice < constants.minimumFee) {
+          data.buyerPrice = data.promoterPrice + constants.minimumFee;
+          data.serviceFee = constants.minimumFee;
+        } else {
+          data.serviceFee = buyerPrice - data.promoterPrice;
+          data.buyerPrice = buyerPrice;
+        }
       }
-      
+
       const newTicketTier = tx.ticketTier.create({
         data: {
           ...data,
@@ -59,6 +75,12 @@ export class TicketTierService {
     return this.prisma.$transaction(async (tx) => {
       if (data.buyerPrice && typeof data.buyerPrice === 'number') {
         const constants = await tx.constants.findUnique({ where: { id: 1 } });
+        
+        if (data.buyerPrice < constants.minimumFee) {
+          throw new BadRequestException(
+            `Buyer price must be greater than or equal to ${constants.minimumFee}`,
+          );
+        }
 
         const serviceFee = Math.ceil(
           data.buyerPrice * constants.serviceFeeRate,
@@ -74,8 +96,13 @@ export class TicketTierService {
           data.promoterPrice / (1 - constants.serviceFeeRate),
         );
 
-        data.serviceFee = buyerPrice - data.promoterPrice;
-        data.buyerPrice = buyerPrice;
+        if (buyerPrice < constants.minimumFee) {
+          data.buyerPrice = data.promoterPrice + constants.minimumFee;
+          data.serviceFee = constants.minimumFee;
+        } else {
+          data.serviceFee = buyerPrice - data.promoterPrice;
+          data.buyerPrice = buyerPrice;
+        }
       }
       const newTicketTier = tx.ticketTier.update({
         where: where,
